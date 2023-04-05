@@ -8,13 +8,11 @@ def get_data():
     os_codes = []
     os_types = []
 
-    # цикл для перебора файлов
     for i in range(1, 4):
         filename = f'info_{i}.txt'
         with open(filename, encoding='Windows-1251') as file:
             data = file.read()
 
-            # извлечение значений параметров с помощью регулярных выражений
             manufacturer = re.search(r'Изготовитель системы:\s+(.*)', data)
             if manufacturer:
                 manufacturers.append(manufacturer.group(1).strip())
@@ -31,12 +29,10 @@ def get_data():
             if os_type:
                 os_types.append(os_type.group(1).strip())
 
-    # создание списка для хранения данных отчета
     main_data = [
         ['Изготовитель системы', 'Название ОС', 'Код продукта', 'Тип системы']
     ]
 
-    # добавление данных в список
     for i in range(len(manufacturers)):
         main_data.append(
             [manufacturers[i], os_names[i], os_codes[i], os_types[i]])

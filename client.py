@@ -43,7 +43,7 @@ def main():
     sock = socket.socket()
     sock.connect((address, port))
 
-    account_name = input("Enter your name: ")
+    account_name = 'Guest'
     message = create_presence_message(account_name)
     send_message(sock, message)
 

@@ -1,6 +1,11 @@
 import json
 import socket
 import sys
+import log.server_log_config
+import logging
+
+
+SERVER_LOGGER = logging.getLogger('server')
 
 
 def send_message(sock, message):
@@ -38,6 +43,7 @@ def handle_client_message(sock, message):
 def main():
     if len(sys.argv) < 2:
         print("Usage: server.py -p <port> [-a <addr>]")
+        SERVER_LOGGER.info(" Use 'server.py -p <port> [-a <addr>]'")
         return
 
     port_index = sys.argv.index('-p') + 1
@@ -51,16 +57,22 @@ def main():
     sock = socket.socket()
     sock.bind((address, port))
     sock.listen(1)
+    SERVER_LOGGER.debug(f"Listening on {address}:{port}")
     print(f"Listening on {address}:{port}")
 
     while True:
-        client_sock, client_address = sock.accept()
-        print(f"Accepted connection from {client_address}")
+        try:
+            client_sock, client_address = sock.accept()
+            print(f"Accepted connection from {client_address}")
 
-        message = receive_message(client_sock)
-        handle_client_message(client_sock, message)
-
-        client_sock.close()
+            message = receive_message(client_sock)
+            handle_client_message(client_sock, message)
+            SERVER_LOGGER.info(f"Accepted connection from {client_address}")
+            client_sock.close()
+        except json.JSONDecodeError:
+            SERVER_LOGGER.error(
+                f"Couldn't decode json string from {client_address}")
+            client_sock.close()
 
 
 if __name__ == '__main__':

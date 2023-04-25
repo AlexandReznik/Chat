@@ -36,14 +36,20 @@ def receive_message(sock):
 
 
 @log
-def create_presence_message(account_name):
+def create_presence_message(sock, account_name):
+    message_text = input('Write your message or \'exit\' to finish: ')
+    if message_text == 'exit':
+        sock.close()
+        CLIENT_LOGGER.info('Finished')
+        sys.exit(0)
     message = {
-        'action': 'presence',
+        'action': 'message',
         'time': 12345,
         'user': {
             'account_name': account_name,
             'status': 'online'
-        }
+        },
+        'any_message': message_text
     }
     return message
 
@@ -69,7 +75,7 @@ def main():
         sock.connect((address, port))
 
         account_name = 'Guest'
-        message = create_presence_message(account_name)
+        message = create_presence_message(sock, account_name)
         send_message(sock, message)
 
         response = receive_message(sock)
@@ -77,7 +83,7 @@ def main():
         # if result:
         CLIENT_LOGGER.debug(f"Server response: {result}")
         print(f"Server response: {result}")
-        sock.close()
+        # sock.close()
     except ConnectionRefusedError:
         # print("Invalid server response")
         CLIENT_LOGGER.critical(
@@ -89,6 +95,7 @@ def main():
         sock.close()
     except json.JSONDecodeError:
         CLIENT_LOGGER.error("Couldn't decode json string")
+        sock.close()
 
 
 if __name__ == '__main__':

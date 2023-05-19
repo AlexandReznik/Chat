@@ -1,6 +1,12 @@
 import dis
 import socket
 import threading
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+Base = declarative_base()
+
 
 HOST = '0.0.0.0'
 PORT = 7777
@@ -90,6 +96,64 @@ class Server(metaclass=ServerVerifier):
             self._socket = None
 
 
+class Client(Base):
+    __tablename__ = 'client'
+
+    id = Column(Integer, primary_key=True)
+    login = Column(String)
+    info = Column(String)
+
+
+class ClientHistory(Base):
+    __tablename__ = 'client_history'
+
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer)
+    login_time = Column(DateTime)
+    ip_address = Column(String)
+
+
+class ContactList(Base):
+    __tablename__ = 'contact_list'
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer)
+    client_id = Column(Integer)
+
+
+class Storage:
+    def __init__(self, db_path):
+        engine = create_engine(f'sqlite://.{db_path}')
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        self.session = Session()
+
+    def add_client(self, login, info):
+        client = Client(login=login, info=info)
+        self.session.add(client)
+        self.session.commit()
+
+    def add_client_history(self, client_id, login_time, ip_address):
+        client_history = ClientHistory(
+            client_id=client_id, login_time=login_time, ip_address=ip_address)
+        self.session.add(client_history)
+        self.session.commit()
+
+    def add_contact(self, owner_id, client_id):
+        contact = ContactList(owner_id=owner_id, client_id=client_id)
+        self.session.add(contact)
+        self.session.commit()
+
+    def get_client_by_login(self, login):
+        return self.session.query(Client).filter_by(login=login).first()
+
+    def get_client_history_by_client_id(self, client_id):
+        return self.session.query(ClientHistory).filter_by(client_id=client_id).all()
+
+    def get_contacts_by_owner_id(self, owner_id):
+        return self.session.query(ContactList).filter_by(owner_id=owner_id).all()
+
+
 class MyServer(Server):
     def handle_client(self, client_socket, client_address):
         data = client_socket.recv(1024)
@@ -99,6 +163,8 @@ class MyServer(Server):
 
 
 my_server = MyServer(HOST, PORT)
+storage = Storage('db.sqlite3')
+
 my_server.start()
 
 

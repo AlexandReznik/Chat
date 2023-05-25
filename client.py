@@ -1,10 +1,64 @@
 import socket
 import threading
 import dis
+import sqlite3
 
 
 PEER_IP = '127.0.0.1'
 PEER_PORT = 7777
+
+
+class ClientDatabase:
+    def __init__(self, db_file):
+        self.connection = sqlite3.connect(db_file)
+        self.cursor = self.connection.cursor()
+
+    def create_tables(self):
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS contacts (
+                id INTEGER PRIMARY KEY,
+                username TEXT
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY,
+                sender TEXT,
+                receiver TEXT,
+                message TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self.connection.commit()
+
+    def add_contact(self, username):
+        self.cursor.execute("""
+            INSERT INTO contacts (username) VALUES (?)
+        """, (username,))
+        self.connection.commit()
+
+    def get_contacts(self):
+        self.cursor.execute("""
+            SELECT username FROM contacts
+        """)
+        return self.cursor.fetchall()
+
+    def add_message(self, sender, receiver, message):
+        self.cursor.execute("""
+            INSERT INTO messages (sender, receiver, message) VALUES (?, ?, ?)
+        """, (sender, receiver, message))
+        self.connection.commit()
+
+    def get_messages(self, sender, receiver):
+        self.cursor.execute("""
+            SELECT sender, receiver, message, timestamp FROM messages
+            WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
+            ORDER BY timestamp ASC
+        """, (sender, receiver, receiver, sender))
+        return self.cursor.fetchall()
+
+    def close(self):
+        self.connection.close()
 
 
 class ClientVerifier(type):

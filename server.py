@@ -4,6 +4,9 @@ import threading
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from messenger_ui import MessengerApp
+from server_admin_ui import ServerAdminApp
+
 
 Base = declarative_base()
 
@@ -154,6 +157,31 @@ class Storage:
         return self.session.query(ContactList).filter_by(owner_id=owner_id).all()
 
 
+class ContactStorage:
+    def __init__(self):
+        self.contacts = []
+
+    def get_contacts(self, user_login):
+        return {
+            "response": "202",
+            "alert": self.contacts
+        }
+
+    def add_contact(self, user_id):
+        if user_id not in self.contacts:
+            self.contacts.append(user_id)
+            return {"response": 200}
+        else:
+            return {"response": 409}
+
+    def del_contact(self, user_id):
+        if user_id in self.contacts:
+            self.contacts.remove(user_id)
+            return {"response": 200}
+        else:
+            return {"response": 404}
+
+
 class MyServer(Server):
     def handle_client(self, client_socket, client_address):
         data = client_socket.recv(1024)
@@ -162,6 +190,8 @@ class MyServer(Server):
         client_socket.close()
 
 
+server_app = ServerAdminApp()
+messenger_app = MessengerApp()
 my_server = MyServer(HOST, PORT)
 storage = Storage('db.sqlite3')
 

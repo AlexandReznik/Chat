@@ -5,7 +5,10 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from messenger_ui import MessengerApp
+import os
+import hashlib
 from server_admin_ui import ServerAdminApp
+import hmac
 
 
 Base = declarative_base()
@@ -15,6 +18,14 @@ HOST = '0.0.0.0'
 PORT = 7777
 
 clients = []
+
+
+def login_required(f):
+    def decor(*args, **kwargs):
+        if not 'user_id' or 'passw':
+            return ValueError
+        return f(*args, **kwargs)
+    return decor
 
 
 class PortDescriptor:
@@ -105,6 +116,7 @@ class Client(Base):
     id = Column(Integer, primary_key=True)
     login = Column(String)
     info = Column(String)
+    passw = hashlib.md5(Column(String))
 
 
 class ClientHistory(Base):
@@ -122,6 +134,23 @@ class ContactList(Base):
     id = Column(Integer, primary_key=True)
     owner_id = Column(Integer)
     client_id = Column(Integer)
+
+
+@login_required
+def server_authenticate(connection, secret_key):
+    message = os.urandom(32)
+    connection.send(message)
+    hash = hmac.new(secret_key, message)
+    digest = hash.digest()
+    response = connection.recv(len(digest))
+    return hmac.compare_digest(digest, response)
+
+
+def client_authenticate(connection, secret_key):
+    message = connection.recv(32)
+    hash = hmac.new(secret_key, message)
+    digest = hash.digest()
+    connection.send(digest)
 
 
 class Storage:
